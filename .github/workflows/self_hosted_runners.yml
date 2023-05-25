@@ -112,7 +112,7 @@ jobs:
 
       - name: Start aarch64 EC2 runner
         id: start_ec2_runner
-        uses: theopolis/ec2-github-runner@main
+        uses: osquery/ec2-github-runner@main
         with:
           mode: start
           github-token: ${{ secrets.EC2_GITHUB_RUNNER_GH_PERSONAL_ACCESS_TOKEN }}
@@ -143,7 +143,7 @@ jobs:
           aws-region: ${{ secrets.EC2_GITHUB_RUNNER_AWS_REGION }}
 
       - name: Stop aarch64 EC2 runner
-        uses: theopolis/ec2-github-runner@main
+        uses: osquery/ec2-github-runner@main
         with:
           mode: stop
           github-token: ${{ secrets.EC2_GITHUB_RUNNER_GH_PERSONAL_ACCESS_TOKEN }}
