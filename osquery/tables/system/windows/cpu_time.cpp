@@ -19,33 +19,6 @@
 namespace osquery {
 namespace tables {
 
-static inline long int ticks_to_usecs(int ticks) {
-  return static_cast<long int>(
-      (static_cast<double>(ticks) / CLOCKS_PER_SEC * 1000000));
-}
-
-/**
- * TODO:
- * https://stackoverflow.com/questions/38384658/get-cpu-usage-for-each-core-using-the-windows-command-line
- * https://www.codeproject.com/Articles/10539/Making-WMI-Queries-In-C
- * https://learn.microsoft.com/en-us/windows/win32/wmisdk/example--getting-wmi-data-from-the-local-computer
- * https://stackoverflow.com/questions/19756454/calculating-process-cpu-usage-from-process-totalprocessortime
- * https://wutils.com/wmi/root/cimv2/win32_perfformatteddata_perfos_processor/
- * https://wutils.com/wmi/root/cimv2/win32_perfformatteddata_counters_processorinformation
- * https://wutils.com/wmi/root/cimv2/win32_perfformatteddata_perfproc_process/ <= this one
- * https://www.philosophicalgeek.com/2009/01/03/determine-cpu-usage-of-current-process-c-and-c/
- * prev refs:
- * https://www.linuxhowtos.org/System/procstat.htm
- * https://man7.org/linux/man-pages/man5/proc.5.html
- * https://stackoverflow.com/questions/17432502/how-can-i-measure-cpu-time-and-wall-clock-time-on-both-linux-windows
- * https://learn.microsoft.com/en-us/windows/win32/psapi/enumerating-all-processes
- * https://superuser.com/questions/914782/how-do-you-list-all-processes-on-the-command-line-in-windows
- * https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes?redirectedfrom=MSDN
- * https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime
- * https://learn.microsoft.com/en-us/windows/win32/api/realtimeapiset/nf-realtimeapiset-queryidleprocessorcycletime
- * https://learn.microsoft.com/en-us/windows/win32/api/realtimeapiset/nf-realtimeapiset-queryinterrupttime
- * https://stackoverflow.com/questions/23143693/retrieving-cpu-load-percent-total-in-windows-with-c
-*/
 QueryData genCpuTime(QueryContext& context) {
   QueryData results;
 
@@ -63,7 +36,7 @@ QueryData genCpuTime(QueryContext& context) {
     data.GetString("Name", name);
     long long temp = 0;
     data.GetLongLong("ElapsedTime", temp);
-    uptimeMap[name] = temp;
+    uptimeMap[name] = temp; // in seconds
   }
 
   const Expected<WmiRequest, WmiError> wmiSystemReq =
@@ -81,16 +54,16 @@ QueryData genCpuTime(QueryContext& context) {
     long long uptime = uptimeMap[name];
     long percent = 0;
     data.GetLongLong("PercentUserTime", percent);
-    r["user"] = BIGINT(percent / 100 * uptime);
+    r["user"] = BIGINT(percent * uptime); // hundredths of a second, percent / 100 * uptime * 100
     data.GetLongLong("PercentPrivilegedTime", percent);
-    r["system"] = BIGINT(percent / 100 * uptime);
+    r["system"] = BIGINT(percent * uptime);
     data.GetLongLong("PercentIdleTime", percent);
-    r["idle"] = BIGINT(percent / 100 * uptime);
+    r["idle"] = BIGINT(percent * uptime);
     long idle = percent;
     data.GetLongLong("PercentInterruptTime", percent);
-    r["irq"] = BIGINT(percent / 100 * uptime);
-    data.GetLongLong("PercentPriorityTime", percent]);  // nice = 100 - priority - idle?
-    r["nice"] = BIGINT((100 - percent - idle) / 100 * uptime);
+    r["irq"] = BIGINT(percent * uptime);
+    data.GetLongLong("PercentPriorityTime", percent);  // time spent on low priority threads
+    r["nice"] = BIGINT((100 - percent - idle) * uptime);
     results.push_back(r);
   }
 
